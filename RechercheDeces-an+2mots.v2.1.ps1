@@ -51,7 +51,7 @@ function  preparePrefixes{
 		[Ref]$PrfxZip,
 		[Ref]$PrfxCsv
 	)
-	Write-Output "PrefixZip = $PrefixZip"
+	#Write-Output "PrefixZip = $PrefixZip"
 	$PrefixZip2 = "Deces_"  # Depuis 2020 
 	$PrefixZip1 = "deces-"  # Avant 2020
 	$PrefixCSV2 = "Deces_"   # Depuis 2010 
@@ -102,12 +102,12 @@ Function  prepareUrl {
 		{$PSItem -eq $decActEnt }
 			{
 			$url.Value = 'https://www.insee.fr/fr/statistiques/fichier/4190491'
-			Write-Output "url insee  décénnie en cours"
+			#Write-Output "url insee  décénnie en cours"
 			} 
 		{$PSItem -lt $decActEnt }
 			{
 			$url.Value = 'https://www.insee.fr/fr/statistiques/fichier/4769950'
-			Write-Output "url insee  decennies passees"
+			#Write-Output "url insee  decennies passees"
 			}
 	}
 }
@@ -221,9 +221,11 @@ if ( $anDemEnt -lt $anActuel ) {
 		if ([string]::IsNullOrEmpty($Search)) {
 			Write-Output "$Date Pas de $prenom $nom dans $fileCsv$ext2 " >> $Log
 		} else { 
-		$present = $false # on continue meme apres un succes  
-		Write-Output "$Date $prenom $nom est present dans $fileCsv$ext2 ligne $((($Search -split (';'))[0] -split (':'))[2])" >> $Log
-		Write-Output "$Date Identite : $((($Search -split (';'))[0] -split (':'))[3]) , naissance: $(($Search -split (';'))[2]), deces $(($Search -split (';'))[6]) " >> $Log		
+			$present = $false # on continue meme apres un succes  
+			Write-Output "$Date $prenom $nom est present dans $fileCsv$ext2 ligne $((($Search -split (';'))[0] -split (':'))[2])" >> $Log
+			Foreach ($line in $Search) {
+				Write-Output "$Date Identite : $((($line -split (';'))[0] -split (':'))[3]) , naissance: $(($line -split (';'))[2]), deces $(($line -split (';'))[6]) " >> $Log		
+			}
 		}
 		$indexAn++
 	}

@@ -9,7 +9,7 @@
             "type": "PowerShell",
             "request": "launch",
             "script": "${file}",
-            "args": ["1989", "SIMONE", "LALANDE" ]
+            "args": ["2021", "PASCAL", "ARNOULD" ]
         }
     ]
 }
