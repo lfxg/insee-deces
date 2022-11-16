@@ -15,7 +15,8 @@
 #    .\RechercheDeces-FichiersLocaux.ps1 2019 RONDA Juliette
 #			Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope Process -Force
 # 
-### function  prepareMidNames
+# $verbose
+#Function  prepareMidNames
 #  MidNameZip MUST exist before function is launched
 #  prepareMidNames 1989 -MidZip ([Ref]$MidNameZip) 
 function  prepareMidNames{
@@ -81,6 +82,8 @@ function  preparePrefixes{
 			}
 	}
 }
+# end Function prepare-Prefixes
+#
 ### function  Prepare-url
 #  $insee string MUST exist before function is launched
 #  Prepare-url 1989 -url ([Ref]$insee) 
@@ -111,7 +114,7 @@ Function  prepareUrl {
 			}
 	}
 }
-# end 
+# end Function prepare-url
 #
 $app = "RD3"
 if ($args.Count -eq 3) {
@@ -205,7 +208,7 @@ if ( $anDemEnt -lt $anActuel ) {
 			#
 			$expectedLen = $PrefixCsv.Length + ([String]$decDemEnt).Length + $ext2.Length
 			foreach ($item in $list) {
-					Write-Output $item $item.Length $expectedLen
+					# Write-Output $item $item.Length $expectedLen
 				if ( $item.Length -gt $expectedLen  ) {
 					Rename-Item $DestDir/$item ($($item.substring(0,$expectedLen-$ext2.Length))+$ext2)
 				}
@@ -234,7 +237,7 @@ if ( $anDemEnt -lt $anActuel ) {
 $moisActuel = $((Get-Date).ToString("MM"))
 $indexMois = 1
 $insee = ""
-while (	-not ($present) -and ($indexMois -lt ([convert]::ToInt32($moisActuel)-1))) {
+while (	-not ($present) -and ($indexMois -le ([convert]::ToInt32($moisActuel)-1))) {
 	preparePrefixes $indexAn -PrfxZip ([Ref]$PrefixZip) -PrfxCsv ([Ref]$PrefixCsv)
 	$fileMoisCsv = $PrefixCSV + $anActuel+ "_M"+([String]$indexMois).PadLeft($moisActuel.Length,'0')
 	# test si le fichier csv existe
@@ -245,15 +248,19 @@ while (	-not ($present) -and ($indexMois -lt ([convert]::ToInt32($moisActuel)-1)
 			# sinon Download the file
 			try
 			{
-					$source = "$insee/$fileMoisZip$ext"
-					$Response = Invoke-WebRequest -Uri $source -OutFile $DestDir\$fileMoisZip$ext
-					# This will only execute if the Invoke-WebRequest is successful.
-					Write-Output "$Date Le serveur connait le fichier $fileMoisZip$ext nous avons une copie locale maintenant" >> $Log
-					$StatusCode = $Response.StatusCode
+				$source = "$insee/$fileMoisZip$ext"
+				$Response = Invoke-WebRequest -Uri $source -OutFile $DestDir\$fileMoisZip$ext
+				# This will only execute if the Invoke-WebRequest is successful.
+				Write-Output "$Date Le serveur connait le fichier $fileMoisZip$ext nous avons une copie locale maintenant" >> $Log
+				$StatusCode = $Response.StatusCode
 			} catch {
-					Write-Output "$Date Le serveur ne connait pas le fichier $fileMoisZip$ext, fin de procedure" >> $Log
-					$StatusCode = $_.Exception.Response.StatusCode.value__
-					exit
+				$StatusCode = $_.Exception.Response.StatusCode.value__
+				if ($indexMois -ge ([convert]::ToInt32($moisActuel)-1)) {
+					Write-Output "$Date Le fichier $fileMoisZip$ext n'est pas encore disponible, fin de procedure" >> $Log
+				} else {
+					Write-Output "$Date Le serveur devrait connaitre le fichier $fileMoisZip$ext, fin de procedure" >> $Log
+				}
+				exit
 			}
 		}
 		# decompression
@@ -265,7 +272,7 @@ while (	-not ($present) -and ($indexMois -lt ([convert]::ToInt32($moisActuel)-1)
 		#
 		$expectedLen = $head.Length + $moisActuel.Length + $ext2.Length
 		foreach ($item in $list) {
-				Write-Output $item $item.Length $expectedLen
+				# Write-Output $item $item.Length $expectedLen
 			if ( $item.Length -gt $expectedLen  ) {
 				Rename-Item $DestDir/$item ($($item.substring(0,$expectedLen-$ext2.Length))+$ext2)
 			}
