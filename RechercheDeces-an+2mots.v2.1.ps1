@@ -26,6 +26,7 @@ param(
 )
 BEGIN {
 	$app = "RD4"
+	$inseeAn0 = 1970
 	$nom = $nom.ToUpper()
 	$prenom = $prenom.ToUpper()
 	if ($exact) {
@@ -47,6 +48,10 @@ BEGIN {
 		exit
 		}
 		$anDemEnt =  [convert]::ToInt32($anneeStr)
+		if ( $anDemEnt  -lt $inseeAn0 ) { 
+			Write-Output "$Date Archives INSEE commence en $inseeAn0, fin procedure " >> $Log
+			exit
+		}
 	} else {
 		Write-Output "$Date Attention 3 parametres obligatoire: annee de départ , nom, prenom , fin procedure " >> $Log
 		exit
@@ -259,7 +264,7 @@ PROCESS {
 	$indexMois = 1
 	$insee = ""
 	while (	-not ($present) -and ($indexMois -le ([convert]::ToInt32($moisActuel)-1))) {
-		preparePrefixes $indexAn -PrfxZip ([Ref]$PrefixZip) -PrfxCsv ([Ref]$PrefixCsv)
+		preparePrefixes $anActuel -PrfxZip ([Ref]$PrefixZip) -PrfxCsv ([Ref]$PrefixCsv)
 		$fileMoisCsv = $PrefixCSV + $anActuel+ "_M"+([String]$indexMois).PadLeft($moisActuel.Length,'0')
 		# test si le fichier csv existe
 		if (-not (Test-Path -Path $DestDir\$fileMoisCsv$ext2 -PathType Leaf) ) {

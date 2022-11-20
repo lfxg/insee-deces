@@ -10,7 +10,7 @@
             "type": "PowerShell",
             "request": "launch",
             "script": "${file}",
-            "args": ["-exact", "2021", "PASCAL", "ARNOULD", "1958" ]
+            "args": ["-exact", "2022", "JULIETTE", "RONDA", "1923" ]
         }
     ]
 }
