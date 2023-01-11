@@ -44,16 +44,16 @@ BEGIN {
 	$Log = "$DestDir/Recherches_deces_"+$app +".log"
 	If ( $PSBoundParameters.Keys.Count -ge 3) {
 		if ( -not ($anneeStr -match "^\d+$")) { 
-		Write-Output "$Date Attention le premier parametre obligatoire est l annee de départ, fin procedure " >> $Log
+		myLog "$Date Attention le premier parametre obligatoire est l annee de départ, fin procedure " 
 		exit
 		}
 		$anDemEnt =  [convert]::ToInt32($anneeStr)
 		if ( $anDemEnt  -lt $inseeAn0 ) { 
-			Write-Output "$Date Archives INSEE commence en $inseeAn0, fin procedure " >> $Log
+			myLog "$Date Archives INSEE commence en $inseeAn0, fin procedure " 
 			exit
 		}
 	} else {
-		Write-Output "$Date Attention 3 parametres obligatoire: annee de départ , nom, prenom , fin procedure " >> $Log
+		myLog "$Date Attention 3 parametres obligatoire: annee de départ , nom, prenom , fin procedure " 
 		exit
 	}	
 	# Preparation des variables indispensables
@@ -69,7 +69,17 @@ BEGIN {
 	#  Fichiers |
 	$ext = ".zip"
 	$ext2 = ".csv"
-	#Function  prepareMidNames
+	# Fonction Log activity
+	function myLog{
+		[CmdletBinding()]
+		param(
+			[Parameter()]
+			[String] $Text
+		)
+		write-output "$Text" | out-file -FilePath $Log -Encoding UTF8 -Append
+	}
+	#
+	# Function  prepareMidNames
 	#  MidNameZip MUST exist before function is launched
 	#  prepareMidNames 1989 -MidZip ([Ref]$MidNameZip) 
 	function  prepareMidNames{
@@ -82,19 +92,31 @@ BEGIN {
 		# Calcul decennie date demandee
 		$decDemEnt=([Math]::Floor($annee/10))*10
 		#
-		$anActuel = $((Get-Date).ToString("yyyy"))
+		# On part de l'hypothèse que l'INSEE a un mois de retard / date actuelle
+		$dateMAJ =  $(Get-Date).AddMonths(-1)
+		# Dans notre contexte Actuel veut dir Actuellement disponible sur INSEE
+		$moisActuel = $dateMAJ.ToString("MM")
+		$anActuel = $dateMAJ.ToString("yyyy")
 		# Calcul decennie en cours
-		$decActEnt=([Math]::Floor($anActuel/10))*10
+		$decAct=([Math]::Floor($anActuel/10))*10
 		#
-		switch ($decDemEnt){
-			{($PSItem -lt [Int32]$anActuel) -and ($PSItem -ge [Int32]$decActEnt) }
-				{
-				$MidZip.Value = "$annee" 
-				}
-			{$PSItem -lt [Int32]$decActEnt }
-				{
-				$MidZip.Value = "$decDemEnt" + "-" + "$($decDemEnt+9)" +"-csv"
-				}
+		# Attention si la date MAJ est le mois de décembre 
+		# Nous sommes janvier année N
+		# La compilation de l'an precedent n'est pas faite
+		# les fichiers mensuels sont renommés en ajoutant _annee avant le mois
+		if (($annee -eq $anActuel) -and ($moisActuel -eq "12")) {
+			$MidZip.Value = "$annee"
+		}else {
+			switch ($decDemEnt){
+				{($PSItem -lt [Int32]$anActuel) -and ($PSItem -ge [Int32]$decAct) }
+					{
+					$MidZip.Value = "$annee" 
+					}
+				{$PSItem -lt [Int32]$decAct }
+					{
+					$MidZip.Value = "$decDemEnt" + "-" + "$($decDemEnt+9)" +"-csv"
+					}
+			}
 		}	
 	}
 	function  preparePrefixes{
@@ -105,7 +127,7 @@ BEGIN {
 			[Ref]$PrfxZip,
 			[Ref]$PrfxCsv
 		)
-		#Write-Output "PrefixZip = $PrefixZip"
+		#myLog "PrefixZip = $PrefixZip"
 		$PrefixZip2 = "Deces_"  # Depuis 2020 
 		$PrefixZip1 = "deces-"  # Avant 2020
 		$PrefixCSV2 = "Deces_"   # Depuis 2010 
@@ -119,19 +141,19 @@ BEGIN {
 				{
 				$PrfxZip.Value  =  $PrefixZip2
 				$PrfxCsv.Value  =  $PrefixCsv2
-				#Write-Output " PrefixZip = PrefixZip2 et PrefixCsv = PrefixCsv2"
+				#myLog " PrefixZip = PrefixZip2 et PrefixCsv = PrefixCsv2"
 				}
 			{($PSItem -ge $anBasculeCsv) -And ($PSItem -lt $anBasculeZip)  }
 				{
 				$PrfxZip.Value  =  $PrefixZip1
 				$PrfxCsv.Value  =  $PrefixCsv2
-				#Write-Output " PrefixZip = PrefixZip1 et PrefixCsv = PrefixCsv2"
+				#myLog " PrefixZip = PrefixZip1 et PrefixCsv = PrefixCsv2"
 				}
 			{$PSItem -lt $anBasculeCsv }
 				{
 				$PrfxZip.Value  =  $PrefixZip1
 				$PrfxCsv.Value  =  $PrefixCsv1
-				#Write-Output " PrefixZip = PrefixZip1 et PrefixCsv = PrefixCsv1"
+				#myLog " PrefixZip = PrefixZip1 et PrefixCsv = PrefixCsv1"
 				}
 		}
 	}
@@ -152,18 +174,18 @@ BEGIN {
 		#
 		$anActuel = $((Get-Date).ToString("yyyy"))
 		# Calcul decennie en cours
-		$decActEnt=([Math]::Floor($anActuel/10))*10
+		$decAct=([Math]::Floor($anActuel/10))*10
 		#
 		switch ($decDemEnt){
-			{$PSItem -eq $decActEnt }
+			{$PSItem -eq $decAct }
 				{
-				$url.Value = 'https://www.insee.fr/fr/statistiques/fichier/4190491'
-				#Write-Output "url insee  décénnie en cours"
+				$url.Value = 'https://www.insee.fr/fr/statistiques/fichier/4190491/'
+				#myLog "url insee  décénnie en cours"
 				} 
-			{$PSItem -lt $decActEnt }
+			{$PSItem -lt $decAct }
 				{
-				$url.Value = 'https://www.insee.fr/fr/statistiques/fichier/4769950'
-				#Write-Output "url insee  decennies passees"
+				$url.Value = 'https://www.insee.fr/fr/statistiques/fichier/4769950/'
+				#myLog "url insee  decennies passees"
 				}
 		}
 	}
@@ -173,15 +195,18 @@ BEGIN {
 PROCESS {
 	# ****************************** MAIN ********************************
 	#
-	# Nom du fichier de Log
-	#
-	# Calcul decennie date demandee
+	# Calcul decennie année de début de recherche demandee
 	$decDemEnt=([Math]::Floor($anneeStr/10))*10
 	#
-	$anActuel = $((Get-Date).ToString("yyyy"))
+	# Calcul de la plus récente mise à jour
+	# On part de l'hypothèse que l'INSEE a un mois de retard / date actuelle
+	$dateMAJ =  $(Get-Date).AddMonths(-1)
+	# Dans notre contexte Actuel veut dir ACtuellement disponible sur INSEE
+	$moisActuel = $dateMAJ.ToString("MM")
+	$anActuel = $dateMAJ.ToString("yyyy")
 	# Calcul decennie en cours
-	$decActEnt=([Math]::Floor($anActuel/10))*10
-	#
+	$decAct=([Math]::Floor($anActuel/10))*10
+	# Il faut attendre le mois N° 2 pour que l'INSEE complie l'an precedent
 	#
 	$present = $false
 	$PrefixZip = ""
@@ -195,7 +220,7 @@ PROCESS {
 		$indexAn = $anDemEnt
 		#$indexDec = $decDemEnt
 		while ( -not ($present) -and ($indexAn -lt $anActuel) ) {
-			# test si le fichier csv existe
+			# test si le fichier csv existe localement
 			preparePrefixes $indexAn -PrfxZip ([Ref]$PrefixZip) -PrfxCsv ([Ref]$PrefixCsv)
 			$fileCsv = $PrefixCsv + $indexAn
 			if (-not (Test-Path -Path $DestDir\$fileCsv$ext2 -PathType Leaf) ) {
@@ -210,10 +235,10 @@ PROCESS {
 						{
 							$Response = Invoke-WebRequest -Uri $source -OutFile $DestDir\$fileZip$ext
 							# This will only execute if the Invoke-WebRequest is successful.
-							Write-Output "$Date Le serveur connait le fichier $fileZip$ext nous avons une copie locale maintenant" >> $Log
+							myLog "$Date Le serveur connait le fichier $fileZip$ext nous avons une copie locale maintenant" 
 							$StatusCode = $Response.StatusCode
 						} catch {
-							Write-Output "$Date Le serveur ne connait pas le fichier $fileZip$ext, fin de procedure" >> $Log
+							myLog "$Date Le serveur ne connait pas le fichier $fileZip$ext, fin de procedure" 
 							$StatusCode = $_.Exception.Response.StatusCode.value__
 							exit
 						}
@@ -223,11 +248,11 @@ PROCESS {
 				{
 					$Response = Expand-Archive -Path $DestDir\$fileZip$ext -DestinationPath $DestDir
 					# This will only execute if the Expand-Archive is successful.
-					Write-Output "$Date decompression archive du fichier $fileZip$ext OK" >> $Log
+					myLog "$Date decompression archive du fichier $fileZip$ext OK" 
 					$StatusCode = $Response.StatusCode
 				} catch {
-					Write-Output "$Date Erreur decompression archive du fichier $fileZip, fin de procedure" >> $Log
-					Write-Output "$Date Code erreur $StatusCode = $_.Exception.Response.StatusCode.value__" >> $Log
+					myLog "$Date Erreur decompression archive du fichier $fileZip, fin de procedure" 
+					myLog "$Date Code erreur $StatusCode = $_.Exception.Response.StatusCode.value__" 
 					exit
 				}
 				# On Renomme les fichiers Deces car certains noms sont trop longs
@@ -239,7 +264,7 @@ PROCESS {
 				#
 				$expectedLen = $PrefixCsv.Length + ([String]$decDemEnt).Length + $ext2.Length
 				foreach ($item in $list) {
-						# Write-Output $item $item.Length $expectedLen
+						# myLog $item $item.Length $expectedLen
 					if ( $item.Length -gt $expectedLen  ) {
 						Rename-Item $DestDir/$item ($($item.substring(0,$expectedLen-$ext2.Length))+$ext2)
 					}
@@ -248,22 +273,20 @@ PROCESS {
 			# on recherche le prenom et le nom
 			$Search = Select-String -Path $DestDir\$fileCsv$ext2 -pattern $regName
 			if ([string]::IsNullOrEmpty($Search)) {
-				Write-Output "$Date Pas de $prenom $nom dans $fileCsv$ext2 " >> $Log
+				myLog "$Date Pas de $prenom $nom dans $fileCsv$ext2 " 
 			} else { 
 				$present = $false # on continue meme apres un succes  
-				Write-Output "$Date $prenom $nom est present dans $fileCsv$ext2 ligne $((($Search -split (';'))[0] -split (':'))[2])" >> $Log
+				myLog "$Date $prenom $nom est present dans $fileCsv$ext2 ligne $((($Search -split (';'))[0] -split (':'))[2])" 
 				Foreach ($line in $Search) {
-					Write-Output "$Date Identite : $((($line -split (';'))[0] -split (':'))[3]) , naissance: $(($line -split (';'))[2]), deces $(($line -split (';'))[6]) " >> $Log		
+					myLog "$Date Identite : $((($line -split (';'))[0] -split (':'))[3]) , naissance: $(($line -split (';'))[2]), deces $(($line -split (';'))[6]) " 		
 				}
 			}
 			$indexAn++
 		}
-	}
-	# On cherche maintenant sur annee en cours
-	$moisActuel = $((Get-Date).ToString("MM"))
-	$indexMois = 1
+	} 
 	$insee = ""
-	while (	-not ($present) -and ($indexMois -le ([convert]::ToInt32($moisActuel)-1))) {
+	$indexMois = 1
+	while (	-not ($present) -and ($indexMois -le ([convert]::ToInt32($moisActuel)))) {
 		preparePrefixes $anActuel -PrfxZip ([Ref]$PrefixZip) -PrfxCsv ([Ref]$PrefixCsv)
 		$fileMoisCsv = $PrefixCSV + $anActuel+ "_M"+([String]$indexMois).PadLeft($moisActuel.Length,'0')
 		# test si le fichier csv existe
@@ -272,19 +295,20 @@ PROCESS {
 			$fileMoisZip = $PrefixZip + $anActuel+ "_M"+([String]$indexMois).PadLeft($moisActuel.Length,'0')
 			if (-not (Test-Path -Path $DestDir\$fileMoisZip$ext -PathType Leaf) ) {
 				# sinon Download the file
+				prepareUrl $indexAn  -url ([Ref]$insee) 
+				$source = "$insee/$fileMoisZip$ext"
 				try
 				{
-					$source = "$insee/$fileMoisZip$ext"
 					$Response = Invoke-WebRequest -Uri $source -OutFile $DestDir\$fileMoisZip$ext
 					# This will only execute if the Invoke-WebRequest is successful.
-					Write-Output "$Date Le serveur connait le fichier $fileMoisZip$ext nous avons une copie locale maintenant" >> $Log
+					myLog "$Date Le serveur connait le fichier $fileMoisZip$ext nous avons une copie locale maintenant" 
 					$StatusCode = $Response.StatusCode
 				} catch {
 					$StatusCode = $_.Exception.Response.StatusCode.value__
 					if ($indexMois -ge ([convert]::ToInt32($moisActuel)-1)) {
-						Write-Output "$Date Le fichier $fileMoisZip$ext n'est pas encore disponible, fin de procedure" >> $Log
+						myLog "$Date Le fichier $fileMoisZip$ext n'est pas encore disponible, fin de procedure" 
 					} else {
-						Write-Output "$Date Le serveur devrait connaitre le fichier $fileMoisZip$ext, fin de procedure" >> $Log
+						myLog "$Date Le serveur devrait connaitre le fichier $fileMoisZip$ext, fin de procedure" 
 					}
 					exit
 				}
@@ -298,7 +322,7 @@ PROCESS {
 			#
 			$expectedLen = $head.Length + $moisActuel.Length + $ext2.Length
 			foreach ($item in $list) {
-					# Write-Output $item $item.Length $expectedLen
+					# myLog $item $item.Length $expectedLen
 				if ( $item.Length -gt $expectedLen  ) {
 					Rename-Item $DestDir/$item ($($item.substring(0,$expectedLen-$ext2.Length))+$ext2)
 				}
@@ -307,16 +331,16 @@ PROCESS {
 		# on recherche le prenom et le nom
 		$Search = Select-String -Path $DestDir\$fileMoisCsv$ext2 -pattern $regName
 		if ([string]::IsNullOrEmpty($Search)) {
-			Write-Output "$Date Pas de $prenom $nom dans $fileMoisCsv$ext2 " >> $Log
+			myLog "$Date Pas de $prenom $nom dans $fileMoisCsv$ext2 " 
 		} else { 
 			$present = $false  # on continue meme apres un succes
-			Write-Output "$Date $prenom $nom est presente dans $fileMoisCsv$ext2 ligne $((($Search -split (';'))[0] -split (':'))[2]) " >> $Log
-			Write-Output "$Date Identite : $((($Search -split (';'))[0] -split (':'))[3]) , naissance: $(($Search -split (';'))[2]), deces $(($Search -split (';'))[6]) " >> $Log		
+			myLog "$Date $prenom $nom est presente dans $fileMoisCsv$ext2 ligne $((($Search -split (';'))[0] -split (':'))[2]) " 
+			myLog "$Date Identite : $((($Search -split (';'))[0] -split (':'))[3]) , naissance: $(($Search -split (';'))[2]), deces $(($Search -split (';'))[6]) " 		
 		}
 		$indexMois++
 	}
 }
 END {
-Write-Output "$Date La recherche programme est finie " >> $Log
+myLog "$Date La recherche programme est finie " 
 # end
 }
